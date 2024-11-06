@@ -1,0 +1,177 @@
+{% extends "base.html" %} 
+{% block content %}
+<div class="flex h-screen max-h-screen overflow-hidden">
+  <!-- Hidden fields for data -->
+  <input type="hidden" id="corpus_name" value="{{ corpus_name }}">
+  <input type="hidden" id="project_id" value="{{ project_id }}">
+  <input type="hidden" id="bucket_name" value="{{ bucket_name }}">
+
+  <!-- Sidebar -->
+  <div class="w-64 bg-gray-50 p-4 border-r">
+    <div class="mb-4">
+      <h2 class="text-lg font-bold mb-2">Documents</h2>
+      <div id="documents-list" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="flex-1 flex flex-col">
+    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+
+    <!-- Input Area -->
+    <div class="p-4 border-t bg-white">
+      <div class="flex space-x-4">
+        <input
+          type="text"
+          id="query-input"
+          class="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+          placeholder="Type your message..."
+        />
+        <button
+          onclick="sendQuery()"
+          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Store values in localStorage when the page loads
+  window.onload = function () {
+    const projectId = document.getElementById('project_id').value;
+    const bucketName = document.getElementById('bucket_name').value;
+    
+    if (projectId) {
+      localStorage.setItem('project_id', projectId);
+    }
+    if (bucketName) {
+      localStorage.setItem('bucket_name', bucketName);
+    }
+    
+    fetchDocuments();
+  };
+
+  async function fetchDocuments() {
+    const corpusName = document.getElementById('corpus_name').value;
+    const projectId = document.getElementById('project_id').value;
+
+    try {
+      const response = await fetch(
+        `/api/files/${corpusName}?project_id=${projectId}`
+      );
+      const data = await response.json();
+
+      const documentsList = document.getElementById('documents-list');
+      documentsList.innerHTML = '';
+
+      data.files.forEach((file) => {
+        const docElement = document.createElement('div');
+        docElement.className =
+          'flex items-center justify-between p-2 bg-white rounded shadow-sm';
+        docElement.innerHTML = `
+          <div class="flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="text-sm truncate">${file}</span>
+          </div>
+          <button onclick="deleteDocument('${file}')" class="text-red-500 hover:text-red-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        `;
+        documentsList.appendChild(docElement);
+      });
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  }
+
+  async function deleteDocument(fileId) {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+
+    const corpusName = document.getElementById('corpus_name').value;
+    const projectId = document.getElementById('project_id').value;
+
+    try {
+      const response = await fetch(
+        `/api/corpus/${corpusName}/document?project_id=${projectId}&document_id=${fileId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (response.ok) {
+        fetchDocuments();
+      } else {
+        alert('Error deleting document');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error deleting document');
+    }
+  }
+
+  function addMessage(content, isUser = false) {
+    const messagesDiv = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `p-4 rounded-lg max-w-3xl ${
+      isUser ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
+    }`;
+
+    messageDiv.innerHTML = `
+      <p class="text-sm font-semibold mb-1">${isUser ? 'You' : 'Assistant'}</p>
+      <p class="text-gray-800">${content}</p>
+    `;
+
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  async function sendQuery() {
+    const input = document.getElementById('query-input');
+    const query = input.value.trim();
+    if (!query) return;
+
+    addMessage(query, true);
+    input.value = '';
+
+    try {
+      const response = await fetch('/api/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          project_id: document.getElementById('project_id').value,
+          corpus_name: document.getElementById('corpus_name').value,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.text) {
+        addMessage(data.text);
+      } else {
+        addMessage('Error: No response from assistant');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      addMessage('Error: Failed to get response');
+    }
+  }
+
+  // Handle Enter key
+  document
+    .getElementById('query-input')
+    .addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        sendQuery();
+      }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>{% block title %}Vertex RAG Flask{% endblock %}</title>
+    <meta name="description" content="Vertex RAG Flask - Document Q&A System" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <!-- Add loading spinner CSS -->
+    <style>
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 3px solid #3b82f6;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.3s ease-in;
+      }
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <a href="{{ url_for('main.index') }}" class="flex items-center">
+              <img
+                src="{{ url_for('static', filename='favicon.ico') }}"
+                class="h-8 w-8 mr-2"
+              />
+              <span class="text-xl font-bold text-gray-800"
+                >Vertex RAG Flask</span
+              >
+            </a>
+            <div class="hidden md:flex ml-10 space-x-8">
+              <a
+                href="{{ url_for('main.upload') }}"
+                class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium {% if request.endpoint == 'main.upload' %}bg-gray-100{% endif %}"
+              >
+                Upload Document
+              </a>
+              <a
+                href="#"
+                id="stored-project-id"
+                class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              ></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div
+        class="fade-in mb-4 rounded-md p-4 {% if category == 'error' %}bg-red-100 border-red-400 text-red-700{% else %}bg-blue-100 border-blue-400 text-blue-700{% endif %}"
+        role="alert"
+      >
+        {{ message }}
+      </div>
+      {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
+    </main>
+
+    <script>
+      // Display stored project ID in nav if available
+      document.addEventListener("DOMContentLoaded", function () {
+        const projectId = localStorage.getItem("project_id");
+        const projectIdElement = document.getElementById("stored-project-id");
+        if (projectId && projectIdElement) {
+          projectIdElement.textContent = `Project: ${projectId}`;
+        }
+      });
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

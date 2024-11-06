@@ -1,0 +1,37 @@
+[project]
+name = "vertex-rag-flask"
+version = "0.1.0"
+description = "Flask application for RAG using Google Vertex AI"
+authors = [
+    { name = "@cherninlab", email = "cherninlab@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "flask",
+    "python-dotenv",
+    "google-cloud-aiplatform",
+    "google-cloud-storage",
+    "vertexai",
+    "google-cloud-storage",
+    "werkzeug",
+    "pydantic",
+    "flask-wtf",
+    "unstructured[all-docs]",
+    "python-magic-bin; platform_system == 'Windows'",
+    "libmagic; platform_system != 'Windows'"
+]
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["app", "config"]

@@ -1,0 +1,55 @@
+{% extends "base.html" %} {% block title %}Vertex RAG Flask - Home{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="text-center">
+    <h1
+      class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl"
+    >
+      <span class="block">Document Q&A System</span>
+      <span class="block text-blue-600">with Vertex AI</span>
+    </h1>
+    <p
+      class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
+    >
+      Upload your documents and ask questions in natural language. Get
+      AI-powered answers with precise context from your documents.
+    </p>
+
+    <div class="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+      <div class="rounded-md shadow">
+        <a
+          href="{{ url_for('main.upload') }}"
+          class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10 transition-all duration-150"
+        >
+          Start Upload
+        </a>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="text-2xl mb-4">📄</div>
+        <h3 class="text-lg font-medium text-gray-900">Multiple Formats</h3>
+        <p class="mt-2 text-gray-500">
+          Support for PDF, DOCX, PPTX, and Markdown files
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="text-2xl mb-4">🤖</div>
+        <h3 class="text-lg font-medium text-gray-900">AI-Powered</h3>
+        <p class="mt-2 text-gray-500">
+          Using Google's Vertex AI for accurate responses
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="text-2xl mb-4">💬</div>
+        <h3 class="text-lg font-medium text-gray-900">Natural Queries</h3>
+        <p class="mt-2 text-gray-500">Ask questions in plain language</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
