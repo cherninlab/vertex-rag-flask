@@ -89,11 +89,20 @@ def upload():
             if not chunks:
                 raise ValueError("No content could be extracted from document")
 
+            # Create corpus and import chunks
+            project_id = get_project_id()
+            bucket_name = request.form.get("bucket_name")
+            corpus_name = f"corpus_{upload_id}"
+            config = RagConfig(project_id=project_id, bucket_name=bucket_name)
+            vertex_service = VertexService(config)
+            corpus = vertex_service.create_corpus()
+            vertex_service.import_chunks(corpus, chunks)
+
             # Return success response
             return jsonify({
                 "status": "success",
                 "message": "Document processed successfully",
-                "redirect": url_for("main.chat")
+                "redirect": url_for("main.chat", corpus_name=corpus.name)
             })
 
         except Exception as e:
