@@ -48,81 +48,92 @@ def create_new_bucket():
 def upload():
     """Handle document uploads and processing."""
     if request.method == "POST":
-        if "file" not in request.files:
-            flash("No file part", "error")
-            return redirect(request.url)
+        try:
+            upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
+            upload_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
 
-        project_id = get_project_id()  # Always use project ID from credentials
-        bucket_name = request.form.get("bucket_name")
-
-        if not bucket_name:
-            flash("Bucket name is required", "error")
-            return redirect(request.url)
-
-        file = request.files["file"]
-        if file.filename == "":
-            flash("No selected file", "error")
-            return redirect(request.url)
-
-        if file and allowed_file(file.filename):
-            try:
-                # Save bucket name
-                current_app.config["LAST_BUCKET_NAME"] = bucket_name
-
-                filename = secure_filename(file.filename)
-                upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
-                upload_dir.mkdir(exist_ok=True)
-
-                filepath = upload_dir / filename
-
-                # Save and process file
-                file.save(filepath)
-
-                # Process document
-                doc_service = DocumentService()
-                chunks = doc_service.process_document(filepath)
-
-                if not chunks:
-                    flash("No text content found in document", "error")
-                    return redirect(request.url)
-
-                # Create corpus and import chunks
-                config = RagConfig(
-                    project_id=project_id,
-                    bucket_name=bucket_name,
-                    display_name=f"corpus_{filename}"
-                )
-                service = VertexService(config)
-
-                corpus = service.create_corpus()
-                service.import_chunks(corpus, chunks)
-
-                flash(f"Successfully processed document: {
-                      filename}", "success")
-                return redirect(url_for(
-                    "main.chat",
-                    corpus_name=corpus.name,
-                    project_id=project_id
-                ))
-            except Exception as e:
-                flash(f"Error: {str(e)}", "error")
+            # Check if file was submitted
+            if "file" not in request.files:
+                current_app.logger.error("No file part in request")
+                flash("No file part", "error")
                 return redirect(request.url)
-            finally:
-                # Clean up uploaded file
-                if filepath.exists():
-                    filepath.unlink()
 
-    # For GET request, prepare the template data
+            # Validate bucket name
+            project_id = get_project_id()
+            bucket_name = request.form.get("bucket_name")
+            if not bucket_name:
+                current_app.logger.error("Missing bucket name")
+                flash("Bucket name is required", "error")
+                return redirect(request.url)
+
+            file = request.files["file"]
+            if file.filename == "":
+                current_app.logger.error("No selected file")
+                flash("No selected file", "error")
+                return redirect(request.url)
+
+            if file and allowed_file(file.filename):
+                try:
+                    current_app.config["LAST_BUCKET_NAME"] = bucket_name
+                    filename = secure_filename(file.filename)
+                    filepath = upload_dir / filename
+
+                    # Log file details
+                    current_app.logger.info(f"Processing file: {filename}")
+                    current_app.logger.info(
+                        f"File size: {len(file.read())} bytes")
+                    file.seek(0)  # Reset file pointer
+
+                    file.save(filepath)
+
+                    # Process document
+                    doc_service = DocumentService()
+                    chunks = doc_service.process_document(filepath)
+
+                    if not chunks:
+                        current_app.logger.error(
+                            f"No content extracted from {filename}")
+                        flash("No text content found in document", "error")
+                        return redirect(request.url)
+
+                    # Create corpus and import chunks
+                    config = RagConfig(
+                        project_id=project_id,
+                        bucket_name=bucket_name,
+                        display_name=f"corpus_{filename}"
+                    )
+                    service = VertexService(config)
+                    corpus = service.create_corpus()
+                    service.import_chunks(corpus, chunks)
+
+                    flash(f"Successfully processed document: {
+                          filename}", "success")
+                    return redirect(url_for("main.chat", corpus_name=corpus.name, project_id=project_id))
+
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Upload processing error: {str(e)}")
+                    flash(f"Error processing upload: {str(e)}", "error")
+                    return redirect(request.url)
+                finally:
+                    # Clean up uploaded file
+                    if filepath.exists():
+                        filepath.unlink()
+            else:
+                current_app.logger.error(f"Invalid file type: {file.filename}")
+                flash("Invalid file type", "error")
+                return redirect(request.url)
+
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error: {str(e)}")
+            flash("An unexpected error occurred", "error")
+            return redirect(request.url)
+
+    # GET request handling
     project_id = get_project_id()
     buckets = list_buckets(project_id)
     last_bucket_name = current_app.config.get("LAST_BUCKET_NAME", "")
-
-    return render_template(
-        "upload.html",
-        project_id=project_id,
-        buckets=buckets,
-        selected_bucket=last_bucket_name
-    )
+    return render_template("upload.html", buckets=buckets, last_bucket_name=last_bucket_name)
 
 
 @bp.route("/chat")
