@@ -1,6 +1,6 @@
 # Vertex RAG Flask
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Tests](https://github.com/cherninlab/vertex-rag-flask/actions/workflows/ci.yml/badge.svg)
@@ -120,7 +120,7 @@ vertex-rag-flask/
 
 ### System Requirements
 
-- Python 3.9+
+- Python 3.11+
 - Google Cloud Project with enabled APIs
 - Service account with appropriate permissions
 
