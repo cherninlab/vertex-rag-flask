@@ -1,9 +1,9 @@
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Any
 import tempfile
 import os
-import uuid
 
 from google.cloud import storage
 from vertexai.preview import rag

@@ -45,3 +45,6 @@ uploads/
 
 # Google Cloud
 *.json
+
+
+app.log

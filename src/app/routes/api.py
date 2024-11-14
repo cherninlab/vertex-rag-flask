@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from pydantic import BaseModel
 
 from app.services.vertex_service import RagConfig, VertexService
@@ -23,13 +23,13 @@ def query():
     try:
         config = RagConfig(project_id=data.project_id)
         service = VertexService(config)
-        
+
         response = service.query(
             corpus=data.corpus_name,
             query=data.query,
             top_k=data.top_k
         )
-        
+
         return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -54,7 +54,7 @@ def list_files(corpus_name: str):
 def delete_document(corpus_name: str):
     project_id = request.args.get("project_id")
     document_id = request.args.get("document_id")
-    
+
     if not all([project_id, document_id]):
         return jsonify({"error": "Missing required parameters"}), 400
 
@@ -65,3 +65,10 @@ def delete_document(corpus_name: str):
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/upload/status", methods=["GET"])
+def upload_status():
+    upload_id = request.args.get("upload_id")
+    status = current_app.config.get(f"upload_status_{upload_id}", {})
+    return jsonify(status)

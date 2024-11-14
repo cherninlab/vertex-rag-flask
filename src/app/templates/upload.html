@@ -290,6 +290,13 @@
     errorDiv.classList.remove('hidden');
   }
 
+  // Show success message
+  function showSuccess(message) {
+    const successDiv = document.getElementById('success-message');
+    successDiv.textContent = message;
+    successDiv.classList.remove('hidden');
+  }
+
   // Cancel upload
   document.getElementById('cancelUpload').addEventListener('click', function() {
     if (xhr && xhr.readyState !== 4) {
@@ -346,5 +353,33 @@
       console.error('Error:', error);
     }
   });
+
+  async function uploadFile(formData) {
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Upload failed');
+        }
+        
+        const result = await response.json();
+        
+        if (result.status === 'error') {
+            showError(result.message);
+        } else if (result.status === 'success') {
+            showSuccess(result.message);
+            if (result.redirect) {
+                window.location.href = result.redirect;
+            }
+        }
+    } catch (error) {
+        showError(`Upload failed: ${error.message}`);
+        console.error('Upload error:', error);
+    }
+}
 </script>
 {% endblock %}

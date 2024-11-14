@@ -84,12 +84,13 @@ gcloud iam service-accounts keys create credentials.json --iam-account=vertex-ra
 - The service account needs both Vertex AI and Storage permissions to function properly
 - You can use more granular permissions instead of storage.admin if needed
 
-## Usage
+## Usage 
 
 1. Start the application:
 
 ```bash
 flask run
+# FLASK_DEBUG=1 FLASK_APP=src/app flask run --debug
 ```
 
 2. Open http://localhost:5000 in your browser

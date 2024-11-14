@@ -1,5 +1,6 @@
+import uuid
+import os
 from pathlib import Path
-
 from flask import (
     Blueprint, current_app, flash, redirect,
     render_template, request, url_for, jsonify
@@ -48,86 +49,67 @@ def create_new_bucket():
 def upload():
     """Handle document uploads and processing."""
     if request.method == "POST":
+        upload_id = str(uuid.uuid4())
+        temp_file = None
+
         try:
-            upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
-            upload_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
+            current_app.logger.info(
+                f"Upload request received - ID: {upload_id}")
+            current_app.logger.debug(
+                f"Request headers: {dict(request.headers)}")
 
-            # Check if file was submitted
             if "file" not in request.files:
-                current_app.logger.error("No file part in request")
-                flash("No file part", "error")
-                return redirect(request.url)
-
-            # Validate bucket name
-            project_id = get_project_id()
-            bucket_name = request.form.get("bucket_name")
-            if not bucket_name:
-                current_app.logger.error("Missing bucket name")
-                flash("Bucket name is required", "error")
-                return redirect(request.url)
+                raise ValueError("No file uploaded")
 
             file = request.files["file"]
-            if file.filename == "":
-                current_app.logger.error("No selected file")
-                flash("No selected file", "error")
-                return redirect(request.url)
+            if not file.filename:
+                raise ValueError("Empty filename")
 
-            if file and allowed_file(file.filename):
-                try:
-                    current_app.config["LAST_BUCKET_NAME"] = bucket_name
-                    filename = secure_filename(file.filename)
-                    filepath = upload_dir / filename
+            # Create temporary file
+            filename = secure_filename(file.filename)
+            upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
+            upload_dir.mkdir(exist_ok=True)
+            temp_file = upload_dir / f"{upload_id}_{filename}"
 
-                    # Log file details
-                    current_app.logger.info(f"Processing file: {filename}")
-                    current_app.logger.info(
-                        f"File size: {len(file.read())} bytes")
-                    file.seek(0)  # Reset file pointer
+            # Save uploaded file temporarily
+            file.save(temp_file)
+            current_app.logger.info(f"Saved temp file: {temp_file}")
 
-                    file.save(filepath)
+            # Update status
+            current_app.config[f"upload_status_{upload_id}"] = {
+                "status": "processing",
+                "step": "validating",
+                "progress": 10
+            }
 
-                    # Process document
-                    doc_service = DocumentService()
-                    chunks = doc_service.process_document(filepath)
+            # Process document
+            doc_service = DocumentService()
+            chunks = doc_service.process_document(str(temp_file))
 
-                    if not chunks:
-                        current_app.logger.error(
-                            f"No content extracted from {filename}")
-                        flash("No text content found in document", "error")
-                        return redirect(request.url)
+            if not chunks:
+                raise ValueError("No content could be extracted from document")
 
-                    # Create corpus and import chunks
-                    config = RagConfig(
-                        project_id=project_id,
-                        bucket_name=bucket_name,
-                        display_name=f"corpus_{filename}"
-                    )
-                    service = VertexService(config)
-                    corpus = service.create_corpus()
-                    service.import_chunks(corpus, chunks)
-
-                    flash(f"Successfully processed document: {
-                          filename}", "success")
-                    return redirect(url_for("main.chat", corpus_name=corpus.name, project_id=project_id))
-
-                except Exception as e:
-                    current_app.logger.error(
-                        f"Upload processing error: {str(e)}")
-                    flash(f"Error processing upload: {str(e)}", "error")
-                    return redirect(request.url)
-                finally:
-                    # Clean up uploaded file
-                    if filepath.exists():
-                        filepath.unlink()
-            else:
-                current_app.logger.error(f"Invalid file type: {file.filename}")
-                flash("Invalid file type", "error")
-                return redirect(request.url)
+            # Return success response
+            return jsonify({
+                "status": "success",
+                "message": "Document processed successfully",
+                "redirect": url_for("main.chat")
+            })
 
         except Exception as e:
-            current_app.logger.error(f"Unexpected error: {str(e)}")
-            flash("An unexpected error occurred", "error")
-            return redirect(request.url)
+            current_app.logger.error(
+                f"Upload failed - ID: {upload_id}", exc_info=True)
+            error_msg = str(
+                e) if current_app.debug else "Document processing failed"
+            return jsonify({
+                "status": "error",
+                "message": error_msg
+            }), 400
+
+        finally:
+            # Clean up temporary file
+            if temp_file and os.path.exists(temp_file):
+                os.unlink(temp_file)
 
     # GET request handling
     project_id = get_project_id()
