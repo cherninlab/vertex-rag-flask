@@ -70,13 +70,16 @@ class VertexService:
             raise ValueError("No valid chunks to import")
 
         try:
-            # Import files from GCS
-            rag.import_files(
-                corpus.name,
-                gcs_uris,
-                chunk_size=chunk_size,
-                chunk_overlap=self.config.chunk_overlap
-            )
+            # Import files from GCS in batches of 25
+            batch_size = 25
+            for i in range(0, len(gcs_uris), batch_size):
+                batch_uris = gcs_uris[i:i + batch_size]
+                rag.import_files(
+                    corpus.name,
+                    batch_uris,
+                    chunk_size=chunk_size,
+                    chunk_overlap=self.config.chunk_overlap
+                )
         except Exception as e:
             # Clean up GCS files on failure
             for uri in gcs_uris:
